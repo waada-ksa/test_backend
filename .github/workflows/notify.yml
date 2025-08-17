@@ -1,6 +1,9 @@
 name: Notify Team
 
 on:
+  workflow_run:
+    workflows: ["Build Application"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       build_status:
@@ -8,25 +11,18 @@ on:
         required: true
         type: string
         default: 'success'
-      run_id:
-        description: 'Build workflow run ID'
+      message:
+        description: 'Custom message to send'
         required: false
         type: string
-      commit_sha:
-        description: 'Commit SHA'
-        required: false
-        type: string
-      branch:
-        description: 'Branch name'
-        required: false
-        type: string
-  workflow_run:
-    workflows: ["Build Application"]
-    types: [completed]
 
 env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   SLACK_CHANNEL: '#general'
+
+permissions:
+  actions: read
+  contents: read
 
 jobs:
   notify:
@@ -62,9 +58,9 @@ jobs:
       run: |
         if [ "${{ github.event.inputs.build_status }}" != "" ]; then
           echo "status=${{ github.event.inputs.build_status }}" >> $GITHUB_OUTPUT
-          echo "run_id=${{ github.event.inputs.run_id }}" >> $GITHUB_OUTPUT
-          echo "commit_sha=${{ github.event.inputs.commit_sha }}" >> $GITHUB_OUTPUT
-          echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+          echo "run_id=${{ github.run_id }}" >> $GITHUB_OUTPUT
+          echo "commit_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
         else
           echo "status=${{ steps.workflow_run.outputs.status }}" >> $GITHUB_OUTPUT
           echo "run_id=${{ steps.workflow_run.outputs.run_id }}" >> $GITHUB_OUTPUT

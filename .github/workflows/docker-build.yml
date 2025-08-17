@@ -1,15 +1,19 @@
 name: Docker Build
 
 on:
-  workflow_dispatch:
   workflow_run:
     workflows: ["Build Application"]
     types: [completed]
     branches: [main, master]
+  workflow_dispatch:
 
 env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   SLACK_CHANNEL: '#general'
+
+permissions:
+  actions: read
+  contents: read
 
 jobs:
   docker-build:
