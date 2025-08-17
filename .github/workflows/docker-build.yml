@@ -25,6 +25,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Debug workflow trigger
+      run: |
+        echo "Event name: ${{ github.event_name }}"
+        echo "Ref: ${{ github.ref }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "SHA: ${{ github.sha }}"
+      
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       

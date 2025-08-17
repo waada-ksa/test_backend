@@ -31,7 +31,7 @@ jobs:
     
     steps:
     - name: Get workflow run info
-      if: github.event.workflow_run
+      if: github.event_name == 'workflow_run'
       id: workflow_run
       uses: actions/github-script@v7
       with:
@@ -56,7 +56,7 @@ jobs:
     - name: Set notification variables
       id: set_vars
       run: |
-        if [ "${{ github.event.inputs.build_status }}" != "" ]; then
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
           echo "status=${{ github.event.inputs.build_status }}" >> $GITHUB_OUTPUT
           echo "run_id=${{ github.run_id }}" >> $GITHUB_OUTPUT
           echo "commit_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
@@ -67,6 +67,14 @@ jobs:
           echo "commit_sha=${{ steps.workflow_run.outputs.commit_sha }}" >> $GITHUB_OUTPUT
           echo "branch=${{ steps.workflow_run.outputs.branch }}" >> $GITHUB_OUTPUT
         fi
+    
+    - name: Debug workflow trigger
+      run: |
+        echo "Event name: ${{ github.event_name }}"
+        echo "Build status: ${{ steps.set_vars.outputs.status }}"
+        echo "Run ID: ${{ steps.set_vars.outputs.run_id }}"
+        echo "Commit SHA: ${{ steps.set_vars.outputs.commit_sha }}"
+        echo "Branch: ${{ steps.set_vars.outputs.branch }}"
     
     - name: Notify Slack - Success
       if: steps.set_vars.outputs.status == 'success'
