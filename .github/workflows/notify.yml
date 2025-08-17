@@ -1,0 +1,105 @@
+name: Notify Team
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_status:
+        description: 'Build status (success/failure)'
+        required: true
+        type: string
+        default: 'success'
+      run_id:
+        description: 'Build workflow run ID'
+        required: false
+        type: string
+      commit_sha:
+        description: 'Commit SHA'
+        required: false
+        type: string
+      branch:
+        description: 'Branch name'
+        required: false
+        type: string
+  workflow_run:
+    workflows: ["Build Application"]
+    types: [completed]
+
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  SLACK_CHANNEL: '#general'
+
+jobs:
+  notify:
+    name: Send Slack Notification
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Get workflow run info
+      if: github.event.workflow_run
+      id: workflow_run
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const run = await github.rest.actions.getWorkflowRun({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.event.workflow_run.id
+          });
+          
+          const conclusion = run.data.conclusion || 'unknown';
+          const status = conclusion === 'success' ? 'success' : 'failure';
+          
+          core.setOutput('status', status);
+          core.setOutput('run_id', run.data.id);
+          core.setOutput('commit_sha', run.data.head_sha);
+          core.setOutput('branch', run.data.head_branch);
+          core.setOutput('conclusion', conclusion);
+          
+          return { status, run_id: run.data.id, commit_sha: run.data.head_sha, branch: run.data.head_branch };
+    
+    - name: Set notification variables
+      id: set_vars
+      run: |
+        if [ "${{ github.event.inputs.build_status }}" != "" ]; then
+          echo "status=${{ github.event.inputs.build_status }}" >> $GITHUB_OUTPUT
+          echo "run_id=${{ github.event.inputs.run_id }}" >> $GITHUB_OUTPUT
+          echo "commit_sha=${{ github.event.inputs.commit_sha }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+        else
+          echo "status=${{ steps.workflow_run.outputs.status }}" >> $GITHUB_OUTPUT
+          echo "run_id=${{ steps.workflow_run.outputs.run_id }}" >> $GITHUB_OUTPUT
+          echo "commit_sha=${{ steps.workflow_run.outputs.commit_sha }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ steps.workflow_run.outputs.branch }}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Notify Slack - Success
+      if: steps.set_vars.outputs.status == 'success'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        webhook_url: ${{ env.SLACK_WEBHOOK_URL }}
+        channel: ${{ env.SLACK_CHANNEL }}
+        text: "✅ Build successful for ${{ github.repository }}#${{ steps.set_vars.outputs.run_id }}"
+        fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        mention_users: ${{ github.actor }}
+        
+    - name: Notify Slack - Failure
+      if: steps.set_vars.outputs.status == 'failure'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        webhook_url: ${{ env.SLACK_WEBHOOK_URL }}
+        channel: ${{ env.SLACK_CHANNEL }}
+        text: "❌ Build failed for ${{ github.repository }}#${{ steps.set_vars.outputs.run_id }}"
+        fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        mention_users: ${{ github.actor }}
+        
+    - name: Notify Slack - Unknown Status
+      if: steps.set_vars.outputs.status == 'unknown'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: custom
+        webhook_url: ${{ env.SLACK_WEBHOOK_URL }}
+        channel: ${{ env.SLACK_CHANNEL }}
+        text: "❓ Build status unknown for ${{ github.repository }}#${{ steps.set_vars.outputs.run_id }}"
+        fields: repo,message,commit,author,action,eventName,ref,workflow,job,took

@@ -1,28 +1,47 @@
 # GitHub Actions Setup Guide
 
-This directory contains GitHub Actions workflows for CI/CD automation.
+This directory contains GitHub Actions workflows for CI/CD automation with **separated concerns**.
 
 ## 📋 Available Workflows
 
-### 1. **ci-cd.yml** - Full CI/CD Pipeline
-- **Triggers**: Push to main/master/develop, Pull Requests, Manual dispatch
-- **Features**: 
-  - Build and test .NET application
-  - Docker image building
-  - Slack notifications for build status
-  - Artifact uploads
-
-### 2. **build.yml** - Simple Build Workflow
+### 1. **build.yml** - Build and Test Only
 - **Triggers**: Push to any branch, Pull Requests, Manual dispatch
 - **Features**: 
-  - Quick .NET build verification
-  - No Slack notifications (for faster execution)
+  - Build and test .NET application
+  - Publish application
+  - Upload build artifacts
+  - **No Slack notifications** (focused on building)
+  - Triggers notification workflow on completion
 
-### 3. **slack-notification.yml** - Reusable Slack Notifications
-- **Usage**: Called by other workflows
+### 2. **notify.yml** - Slack Notifications Only
+- **Triggers**: 
+  - Manual dispatch (with custom inputs)
+  - Automatically triggered by build workflow completion
 - **Features**: 
-  - Configurable Slack notifications
-  - Reusable across multiple workflows
+  - Send Slack notifications for build status
+  - Configurable notification messages
+  - Handles success, failure, and unknown statuses
+
+### 3. **docker-build.yml** - Docker Build Only
+- **Triggers**: 
+  - Manual dispatch
+  - Automatically triggered by build workflow completion (main/master only)
+- **Features**: 
+  - Build Docker images
+  - Send Slack notifications for Docker build status
+  - Only runs on main/master branches
+
+### 4. **ci-cd.yml** - Legacy Full Pipeline (Optional)
+- **Note**: This is the original combined workflow
+- **Use**: Only if you prefer the combined approach
+
+## 🔄 Workflow Flow
+
+```
+Push Code → Build Workflow → Notification Workflow
+                ↓
+            Docker Build (main/master only)
+```
 
 ## 🔧 Setup Requirements
 
@@ -42,7 +61,7 @@ Add these secrets in your GitHub repository settings:
 
 ## 🚀 How It Works
 
-### **Build Process**
+### **Build Process (build.yml)**
 1. **Checkout** code from repository
 2. **Setup** .NET 9.0 environment
 3. **Restore** NuGet dependencies
@@ -50,9 +69,14 @@ Add these secrets in your GitHub repository settings:
 5. **Test** (if tests exist)
 6. **Publish** application
 7. **Upload** artifacts
-8. **Notify** Slack of results
+8. **Trigger** notification workflow
 
-### **Docker Build** (Main/Master branches only)
+### **Notification Process (notify.yml)**
+1. **Receive** build status from build workflow
+2. **Format** notification message
+3. **Send** to Slack with appropriate emoji and details
+
+### **Docker Build Process (docker-build.yml)**
 1. **Setup** Docker Buildx
 2. **Build** Docker image
 3. **Notify** Slack of Docker build status
@@ -60,26 +84,27 @@ Add these secrets in your GitHub repository settings:
 ## 📱 Slack Notifications
 
 ### **Success Messages**
-- ✅ Build successful
-- 🐳 Docker build successful
-- Includes commit info, author, and build details
+- ✅ **Build successful** - Sent by notification workflow
+- 🐳 **Docker build successful** - Sent by Docker workflow
 
 ### **Failure Messages**
-- ❌ Build failed
-- 🐳 Docker build failed
-- Mentions the user who triggered the build
+- ❌ **Build failed** - Sent by notification workflow
+- 🐳 **Docker build failed** - Sent by Docker workflow
+
+### **Unknown Status**
+- ❓ **Build status unknown** - Handles edge cases
 
 ## 🔄 Workflow Triggers
 
-- **Push**: Automatically runs on code pushes
-- **Pull Request**: Runs on PR creation/updates
-- **Manual**: Can be triggered manually via GitHub UI
-- **Scheduled**: Can be extended with cron schedules
+- **Push**: Automatically runs build workflow
+- **Pull Request**: Runs build workflow for validation
+- **Manual**: Can trigger any workflow manually
+- **Workflow Run**: Notifications triggered by build completion
 
 ## 🛠️ Customization
 
 ### **Change Slack Channel**
-Update the `SLACK_CHANNEL` environment variable in workflows:
+Update the `SLACK_CHANNEL` environment variable in workflow files:
 ```yaml
 env:
   SLACK_CHANNEL: '#your-channel-name'
@@ -93,21 +118,30 @@ on:
     branches: [ main, master, develop, feature/*, hotfix/* ]
 ```
 
-### **Extend with Tests**
-Add test execution after the build step:
+### **Modify Notification Messages**
+Edit the `text` field in notification steps:
 ```yaml
-- name: Run tests
-  run: dotnet test backend.sln --no-build --verbosity normal
+text: "🚀 Your custom message here"
 ```
 
 ## 📊 Monitoring
 
 - **View runs**: Go to `Actions` tab in your repository
 - **Check logs**: Click on any workflow run to see detailed logs
-- **Debug issues**: Use workflow logs to troubleshoot build problems
+- **Debug issues**: Use workflow logs to troubleshoot problems
+- **Workflow dependencies**: See how workflows trigger each other
 
 ## 🔒 Security Notes
 
 - **Webhook URLs** are stored as encrypted secrets
 - **No sensitive data** is exposed in workflow logs
 - **Branch protection** can be enabled for additional security
+- **Workflow permissions** are properly scoped
+
+## 🎯 Benefits of Separation
+
+- **Faster builds** - No waiting for Slack API calls
+- **Better debugging** - Isolated workflow concerns
+- **Flexible notifications** - Can trigger independently
+- **Easier maintenance** - Update notifications without affecting builds
+- **Parallel execution** - Multiple workflows can run simultaneously

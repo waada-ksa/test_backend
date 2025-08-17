@@ -1,6 +1,6 @@
 # 🚀 GitHub Actions Quick Start Guide
 
-Get your CI/CD pipeline running in 5 minutes!
+Get your **separated CI/CD pipeline** running in 5 minutes!
 
 ## ⚡ Quick Setup (5 minutes)
 
@@ -16,14 +16,31 @@ Get your CI/CD pipeline running in 5 minutes!
 The workflows are already created! Just commit and push:
 ```bash
 git add .github/
-git commit -m "Add GitHub Actions CI/CD workflows"
+git commit -m "Add separated GitHub Actions workflows"
 git push
 ```
 
 ### **3. Test the Pipeline**
 1. Go to `Actions` tab in your repository
-2. You should see workflows running automatically
+2. You should see **3 separate workflows**:
+   - 🔨 **Build Application** - Builds your .NET app
+   - 📱 **Notify Team** - Sends Slack notifications
+   - 🐳 **Docker Build** - Builds Docker images
 3. Check Slack for notifications! 🎉
+
+## 🔄 How the New System Works
+
+### **Before (Combined)**
+```
+Push Code → Single Workflow (Build + Notify + Docker)
+```
+
+### **Now (Separated)**
+```
+Push Code → Build Workflow → Notification Workflow
+                ↓
+            Docker Build (main/master only)
+```
 
 ## 🔗 Slack Webhook Setup
 
@@ -53,7 +70,7 @@ Repository: waada-ksa/test_backend
 Commit: Add new feature
 Author: @yourusername
 Branch: master
-Workflow: CI/CD Pipeline
+Workflow: Build Application
 ```
 
 ### **Failure Notifications**
@@ -63,22 +80,42 @@ Repository: waada-ksa/test_backend
 Commit: Fix bug
 Author: @yourusername
 Branch: feature/new-feature
-Workflow: CI/CD Pipeline
+Workflow: Build Application
+```
+
+### **Docker Build Notifications**
+```
+🐳 Docker build successful for waada-ksa/test_backend#125
+Repository: waada-ksa/test_backend
+Commit: Update dependencies
+Author: @yourusername
+Branch: master
+Workflow: Docker Build
 ```
 
 ## 🎯 Workflow Features
 
+### **Build Workflow**
 - ✅ **Automatic builds** on every push
-- ✅ **Slack notifications** for success/failure
-- ✅ **Docker builds** for main/master branches
+- ✅ **No Slack delays** (focused on building)
 - ✅ **Artifact storage** for 7 days
-- ✅ **Manual triggers** when needed
-- ✅ **Pull request validation**
+- ✅ **Triggers notifications** automatically
+
+### **Notification Workflow**
+- 📱 **Slack notifications** for success/failure
+- 🔄 **Triggered automatically** by build completion
+- 🎛️ **Manual trigger** with custom inputs
+- 📊 **Rich notification details**
+
+### **Docker Build Workflow**
+- 🐳 **Docker image building** for main/master
+- 📱 **Slack notifications** for Docker status
+- 🔄 **Automatic trigger** after successful builds
 
 ## 🔧 Customization
 
 ### **Change Slack Channel**
-Edit `.github/workflows/ci-cd.yml`:
+Edit the workflow files:
 ```yaml
 env:
   SLACK_CHANNEL: '#your-team-channel'
@@ -91,8 +128,11 @@ on:
     branches: [ main, master, develop, feature/*, hotfix/* ]
 ```
 
-### **Disable Slack Notifications**
-Comment out the Slack notification steps in the workflow files.
+### **Modify Notification Messages**
+Edit the `text` field in notification steps:
+```yaml
+text: "🚀 Your custom message here"
+```
 
 ## 🚨 Troubleshooting
 
@@ -111,6 +151,11 @@ Comment out the Slack notification steps in the workflow files.
 - Verify .NET 9.0 compatibility
 - Check for missing dependencies
 
+### **Workflow Dependencies Not Working**
+- Ensure workflow names match exactly
+- Check branch restrictions in Docker workflow
+- Verify workflow_run triggers are correct
+
 ## 📚 Next Steps
 
 1. **Monitor builds** in Actions tab
@@ -127,11 +172,11 @@ Comment out the Slack notification steps in the workflow files.
 
 ---
 
-**Your CI/CD pipeline is ready! 🎉**
+**Your separated CI/CD pipeline is ready! 🎉**
 
-Every time you push code, GitHub Actions will:
-1. Build your .NET application
-2. Run tests (if any)
-3. Build Docker images (main/master only)
-4. Send Slack notifications
-5. Store build artifacts
+**Benefits of the new system:**
+- 🚀 **Faster builds** - No Slack API delays
+- 🔍 **Better debugging** - Isolated workflow concerns  
+- 🎛️ **Flexible notifications** - Trigger independently
+- 🛠️ **Easier maintenance** - Update workflows separately
+- ⚡ **Parallel execution** - Multiple workflows can run simultaneously

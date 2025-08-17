@@ -1,0 +1,48 @@
+name: Docker Build
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Application"]
+    types: [completed]
+    branches: [main, master]
+
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  SLACK_CHANNEL: '#general'
+
+jobs:
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image
+      run: docker build -t backend-api:${{ github.sha }} .
+      
+    - name: Notify Slack - Docker Build Success
+      if: success()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        webhook_url: ${{ env.SLACK_WEBHOOK_URL }}
+        channel: ${{ env.SLACK_CHANNEL }}
+        text: "🐳 Docker build successful for ${{ github.repository }}#${{ github.run_number }}"
+        fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        
+    - name: Notify Slack - Docker Build Failure
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        webhook_url: ${{ env.SLACK_WEBHOOK_URL }}
+        channel: ${{ env.SLACK_CHANNEL }}
+        text: "🐳 Docker build failed for ${{ github.repository }}#${{ github.run_number }}"
+        fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
