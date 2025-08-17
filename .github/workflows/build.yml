@@ -1,0 +1,34 @@
+name: Build Application
+
+on:
+  push:
+    branches: [ main, master, develop, feature/* ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  build:
+    name: Build .NET Application
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore backend.sln
+      
+    - name: Build solution
+      run: dotnet build backend.sln --no-restore --configuration Release
+      
+    - name: Build status
+      run: echo "✅ Build completed successfully!"
